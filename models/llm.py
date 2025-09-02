@@ -19,6 +19,8 @@ class Provider(Base):
     website = Column(String(255))
     description = Column(Text)
 
+    models = relationship("AIModel", back_populates="provider", cascade="all, delete-orphan", passive_deletes=True)
+    api_keys = relationship("ApiKey", back_populates="provider", cascade="all, delete-orphan", passive_deletes=True)
 
 # =======================================
 # ApiKey (사용자별 API Key 관리)
@@ -27,7 +29,7 @@ class Provider(Base):
 # - FK: user_id → User.id
 # =======================================
 class ApiKey(Base):
-    __tablename__ = "api_key"
+    __tablename__ = "api_key_table"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     provider_id = Column(Integer, ForeignKey("provider_table.id", ondelete="CASCADE"), unique=True, nullable=False)
@@ -49,7 +51,7 @@ class ApiKey(Base):
     provider = relationship("Provider", backref="api_keys", foreign_keys=[provider_id])
     # 관계: User ↔ ApiKey (1:N)
     user = relationship("User", backref="api_keys")
-
+    provider = relationship("Provider", back_populates="api_keys", foreign_keys=[provider_id])
 
 # =======================================
 # ConversationSession (대화 세션 메타)
@@ -116,9 +118,17 @@ class AIModel(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     model_name = Column(String(255), unique=True, nullable=False)
 
-    provider_id = Column(Integer, ForeignKey('provider.id', ondelete='CASCADE'), unique=True, nullable=False)
+    # FK 추가
+    provider_id = Column(Integer, ForeignKey("provider_table.id", ondelete="CASCADE"), nullable=False)
+    # provider_id = Column(Integer, ForeignKey('provider.id', ondelete='CASCADE'), unique=True, nullable=False)
     provider_name = Column(String(255), ForeignKey('provider.name', ondelete='CASCADE'), nullable=False)
+    provider = relationship("Provider", back_populates="models", foreign_keys=[provider_id])
 
     # 관계: Provider ↔ AIModel (1:N)
-    provider = relationship('Provider', backref='ai_models', foreign_keys=[provider_id])
-    projects = relationship("Project", back_populates="model")
+    # ✅ 관계 명시
+    provider = relationship(
+        "Provider",
+        back_populates="models",
+        primaryjoin="AIModel.provider_id==Provider.id",
+        foreign_keys=[provider_id],
+    )
