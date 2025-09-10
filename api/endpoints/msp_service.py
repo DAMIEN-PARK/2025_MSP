@@ -1,11 +1,19 @@
-from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File, Form
 import anthropic
-from core.config import  CLAUDE_API
+from core.config import CLAUDE_API, GPT_API
 from fastapi.responses import JSONResponse
 from email.mime.text import MIMEText
 import smtplib
 from email.mime.multipart import MIMEMultipart
 import core.config as config
+
+from langchain_service.document_loader.file_loader import load_document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.chains import RetrievalQA
+import tempfile
+import os
 
 from service.prompt import preview_prompt
 
@@ -47,6 +55,29 @@ async def uploadRAG(request: Request, file: UploadFile = File(...)):
     print(form_data)
     print(file.filename)
     return {"filename": file.filename}
+
+
+@service_router.post("/pdfRAG")
+async def pdf_rag(question: str = Form(...), file: UploadFile = File(...)):
+    contents = await file.read()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+
+    try:
+        documents = load_document(tmp_path)
+        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        docs = splitter.split_documents(documents)
+        embeddings = OpenAIEmbeddings(api_key=GPT_API)
+        vectorstore = FAISS.from_documents(docs, embeddings)
+        retriever = vectorstore.as_retriever()
+        llm = ChatOpenAI(api_key=GPT_API)
+        qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+        answer = qa.run(question)
+    finally:
+        os.remove(tmp_path)
+
+    return {"answer": answer}
 
 # 이메일 인증 요청
 @service_router.post("/MSPSendEmail")
