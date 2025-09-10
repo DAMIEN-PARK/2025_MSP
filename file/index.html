@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>PDF RAG 테스트</title>
+</head>
+<body>
+    <h1>PDF RAG 테스트</h1>
+    <input type="file" id="pdfFile" accept="application/pdf" />
+    <input type="text" id="question" placeholder="질문을 입력하세요" />
+    <button id="send">질문하기</button>
+    <pre id="result"></pre>
+
+    <script>
+    document.getElementById('send').addEventListener('click', async () => {
+        const fileInput = document.getElementById('pdfFile');
+        const question = document.getElementById('question').value;
+        if (!fileInput.files.length) {
+            alert('PDF 파일을 선택하세요');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('question', question);
+
+        const response = await fetch('/MSP_SERVICE/pdfRAG', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        document.getElementById('result').textContent = data.answer || JSON.stringify(data);
+    });
+    </script>
+</body>
+</html>
