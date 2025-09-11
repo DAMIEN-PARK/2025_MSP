@@ -12,6 +12,7 @@
     <pre id="result"></pre>
 
     <script>
+    const UPLOADED_FILES = "C:\Users\leegy\Desktop\2025\back\saved_file";
     document.getElementById('send').addEventListener('click', async () => {
         const fileInput = document.getElementById('pdfFile');
         const question = document.getElementById('question').value;
@@ -22,6 +23,7 @@
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         formData.append('question', question);
+        formData.append('UPLOADED_FILES', UPLOADED_FILES);
 
         const response = await fetch('/MSP_SERVICE/pdfRAG', {
             method: 'POST',

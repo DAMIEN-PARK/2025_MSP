@@ -58,14 +58,29 @@ async def uploadRAG(request: Request, file: UploadFile = File(...)):
 
 
 @service_router.post("/pdfRAG")
-async def pdf_rag(question: str = Form(...), file: UploadFile = File(...)):
+async def pdf_rag(
+    question: str = Form(...),
+    file: UploadFile = File(...),
+    upload_dir: str = Form(None, alias="UPLOADED_FILES"),
+):
     contents = await file.read()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+
+    # 지정된 폴더가 있다면 해당 경로에 파일을 저장하고, 없다면 임시파일을 사용한다.
+    if upload_dir:
+        os.makedirs(upload_dir, exist_ok=True)
+        file_path = os.path.join(upload_dir, file.filename)
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        remove_after = False
+    else:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
         tmp.write(contents)
-        tmp_path = tmp.name
+        tmp.close()
+        file_path = tmp.name
+        remove_after = True
 
     try:
-        documents = load_document(tmp_path)
+        documents = load_document(file_path)
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         docs = splitter.split_documents(documents)
         embeddings = OpenAIEmbeddings(api_key=EMBEDDING_API)
@@ -75,7 +90,8 @@ async def pdf_rag(question: str = Form(...), file: UploadFile = File(...)):
         qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
         answer = qa.run(question)
     finally:
-        os.remove(tmp_path)
+        if remove_after and os.path.exists(file_path):
+            os.remove(file_path)
 
     return {"answer": answer}
 
