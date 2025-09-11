@@ -1,7 +1,7 @@
 import json
 from langchain.chains.llm import LLMChain
 from langchain_core.prompts import PromptTemplate
-from core.config import   OPENAI_API
+from core.config import OPENAI_API
 from langchain_community.chat_models import ChatOpenAI
 from core.config import  DEFAULT_CHAT_MODEL
 
