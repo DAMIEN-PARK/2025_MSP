@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File, Form
 import anthropic
-from core.config import CLAUDE_API, GPT_API
+from core.config import CLAUDE_API, OPENAI_API, EMBEDDING_API
 from fastapi.responses import JSONResponse
 from email.mime.text import MIMEText
 import smtplib
@@ -68,10 +68,10 @@ async def pdf_rag(question: str = Form(...), file: UploadFile = File(...)):
         documents = load_document(tmp_path)
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         docs = splitter.split_documents(documents)
-        embeddings = OpenAIEmbeddings(api_key=GPT_API)
+        embeddings = OpenAIEmbeddings(api_key=EMBEDDING_API)
         vectorstore = FAISS.from_documents(docs, embeddings)
         retriever = vectorstore.as_retriever()
-        llm = ChatOpenAI(api_key=GPT_API)
+        llm = ChatOpenAI(api_key=OPENAI_API)
         qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
         answer = qa.run(question)
     finally:
